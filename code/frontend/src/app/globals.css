@@ -1,0 +1,300 @@
+@import "tailwindcss";
+
+:root {
+  /* SpeedGalileo — paleta Duolingo (mockup aprobado: design/variante-c-duolingo.html) */
+  --verde: #58cc02;
+  --verde-oscuro: #46a302;
+  --azul: #1cb0f6;
+  --azul-oscuro: #1899d6;
+  --morado: #ce82ff;
+  --amarillo: #ffc800;
+  --amarillo-oscuro: #e6a800;
+  --rojo: #ff4b4b;
+  --rojo-oscuro: #e04343;
+  --naranja: #ff9600;
+  --txt: #3c3c3c;
+  --txt-2: #777777;
+  --linea: #e5e5e5;
+
+  /* Tokens semánticos del proyecto, mapeados a la paleta anterior */
+  --background: #ffffff;
+  --background-alt: #f7f7f7;
+  --foreground: var(--txt);
+  --foreground-muted: var(--txt-2);
+  --surface: #ffffff;
+  --surface-hover: #f7f7f7;
+  --border: var(--linea);
+
+  --primary: var(--verde);
+  --primary-hover: var(--verde-oscuro);
+  --primary-foreground: #ffffff;
+
+  --accent: var(--azul);
+  --accent-hover: var(--azul-oscuro);
+  --accent-foreground: #ffffff;
+
+  --success: var(--verde-oscuro);
+  --warning: var(--amarillo-oscuro);
+  --danger: var(--rojo-oscuro);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-alt: var(--background-alt);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  /* Colores crudos de la paleta, disponibles como utilidades (bg-verde, text-azul, border-amarillo, ...) */
+  --color-verde: var(--verde);
+  --color-verde-oscuro: var(--verde-oscuro);
+  --color-azul: var(--azul);
+  --color-azul-oscuro: var(--azul-oscuro);
+  --color-morado: var(--morado);
+  --color-amarillo: var(--amarillo);
+  --color-amarillo-oscuro: var(--amarillo-oscuro);
+  --color-rojo: var(--rojo);
+  --color-rojo-oscuro: var(--rojo-oscuro);
+  --color-naranja: var(--naranja);
+
+  --font-sans: var(--font-nunito);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+/* ── Sistema visual Duolingo: botones 3D, tarjetas de borde grueso, bocadillo ── */
+@layer components {
+  .btn-3d {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.9375rem;
+    padding: 0.875rem 1.625rem;
+    border-radius: 16px;
+    color: var(--primary-foreground);
+    background: var(--primary);
+    box-shadow: 0 4px 0 var(--primary-hover);
+    transition:
+      transform 0.06s,
+      box-shadow 0.06s;
+  }
+  .btn-3d:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 var(--primary-hover);
+  }
+  .btn-3d:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .btn-3d-outline {
+    background: var(--surface);
+    color: var(--accent);
+    border: 2px solid var(--border);
+    box-shadow: 0 4px 0 var(--border);
+  }
+  .btn-3d-outline:active {
+    box-shadow: 0 0 0 var(--border);
+  }
+
+  .card-hard {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-bottom-width: 4px;
+    border-radius: 18px;
+  }
+
+  .score-tile {
+    border-radius: 20px;
+    padding: 1.5rem 1.25rem;
+    color: #fff;
+    text-align: center;
+  }
+  .score-tile--g {
+    background: var(--verde);
+    box-shadow: 0 5px 0 var(--verde-oscuro);
+  }
+  .score-tile--y {
+    background: var(--amarillo);
+    box-shadow: 0 5px 0 var(--amarillo-oscuro);
+    color: #5c4500;
+  }
+  .score-tile--r {
+    background: var(--rojo);
+    box-shadow: 0 5px 0 var(--rojo-oscuro);
+  }
+
+  .badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    font-weight: 800;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .badge-status--g {
+    background: #e7f9d8;
+    color: var(--verde-oscuro);
+  }
+  .badge-status--y {
+    background: #fff3d1;
+    color: var(--amarillo-oscuro);
+  }
+  .badge-status--r {
+    background: #ffe3e3;
+    color: var(--rojo-oscuro);
+  }
+
+  .speech-bubble {
+    position: relative;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 18px;
+    padding: 18px 20px;
+  }
+  .speech-bubble::before,
+  .speech-bubble::after {
+    content: "";
+    position: absolute;
+    left: -11px;
+    top: 30px;
+    border: 11px solid transparent;
+    border-right-color: var(--border);
+  }
+  .speech-bubble::after {
+    left: -8px;
+    border-right-color: var(--surface);
+  }
+}
+
+/* ── Animaciones ── */
+@keyframes flota {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.9);
+  }
+  60% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-4px);
+  }
+  40%,
+  60% {
+    transform: translateX(4px);
+  }
+}
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes bounce-sm {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@layer utilities {
+  .animate-float {
+    animation: flota 4s ease-in-out infinite;
+  }
+  .animate-pop {
+    animation: pop 0.4s ease-out;
+  }
+  .animate-shake {
+    animation: shake 0.4s ease-in-out;
+  }
+  .animate-fade-up {
+    animation: fade-up 0.5s ease-out both;
+  }
+  .animate-bounce-sm {
+    animation: bounce-sm 0.6s ease-in-out infinite;
+  }
+  .fade-up-1 {
+    animation-delay: 0.05s;
+  }
+  .fade-up-2 {
+    animation-delay: 0.15s;
+  }
+  .fade-up-3 {
+    animation-delay: 0.25s;
+  }
+
+  .prog-bar > i {
+    transition: width 0.6s ease-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-pop,
+  .animate-shake,
+  .animate-fade-up,
+  .animate-bounce-sm {
+    animation: none;
+  }
+  .prog-bar > i {
+    transition: none;
+  }
+}
