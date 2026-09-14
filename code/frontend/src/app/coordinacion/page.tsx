@@ -6,6 +6,7 @@ import { motion } from "motion/react";
 import { RouteGuard } from "@/components/RouteGuard";
 import { AppHeader } from "@/components/AppHeader";
 import { api, type AttendanceRecord, type AttendanceStatus, type Course } from "@/lib/api";
+import type { AdminStudentDto } from "@/lib/contracts";
 import { CountUp, Mascot, RevealGroup, RevealItem, useReducedMotion } from "@/components/fx";
 
 const STATUS_LABEL: Record<AttendanceStatus, string> = {
@@ -97,7 +98,87 @@ function Summary({ records }: { records: AttendanceRecord[] }) {
   );
 }
 
+interface StudentStats {
+  count: number;
+  points: number;
+  last?: AttendanceRecord;
+}
+
+function StudentsSection({ students, records }: { students: AdminStudentDto[]; records: AttendanceRecord[] }) {
+  const statsById = useMemo(() => {
+    const map = new Map<string, StudentStats>();
+    for (const r of records) {
+      const id = typeof r.student === "string" ? r.student : r.student._id;
+      const s = map.get(id) ?? { count: 0, points: 0 };
+      s.count += 1;
+      s.points += r.points;
+      // records vienen ordenados por día desc: el primero es el más reciente
+      if (!s.last) s.last = r;
+      map.set(id, s);
+    }
+    return map;
+  }, [records]);
+
+  const pending = students.filter((s) => s.mustChangePassword).length;
+
+  return (
+    <section className="mb-6">
+      <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-lg font-extrabold text-foreground">Estudiantes</h2>
+        <p className="text-xs font-bold text-foreground-muted">
+          {students.length} {students.length === 1 ? "registrado" : "registrados"}
+          {pending > 0 && ` · ${pending} con clave pendiente`}
+        </p>
+      </div>
+
+      {students.length === 0 ? (
+        <p className="card-hard px-4 py-5 text-center font-bold text-foreground-muted">
+          No hay estudiantes registrados en este filtro.
+        </p>
+      ) : (
+        <RevealGroup className="space-y-2.5" staggerDelay={0.015}>
+          {students.map((s) => {
+            const stats = statsById.get(s.id);
+            return (
+              <RevealItem key={s.id}>
+                <div className="card-hard flex flex-col gap-1 px-4 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-extrabold text-foreground">{s.name}</span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {s.mustChangePassword && (
+                        <span className="badge-status badge-status--y">Clave pendiente de cambio</span>
+                      )}
+                      {!s.active && <span className="badge-status badge-status--r">Inactivo</span>}
+                      {stats?.last ? (
+                        <span className={STATUS_BADGE[stats.last.status]}>
+                          {STATUS_LABEL[stats.last.status]}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-foreground-muted">Sin asistencias</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-xs font-semibold text-foreground-muted">
+                    {s.course.name || "Sin curso"} · {s.email}
+                    {s.document && ` · ${s.document}`}
+                  </div>
+                  {stats && (
+                    <div className="text-xs font-semibold text-foreground-muted">
+                      {stats.count} {stats.count === 1 ? "registro" : "registros"} · {stats.points} pts
+                    </div>
+                  )}
+                </div>
+              </RevealItem>
+            );
+          })}
+        </RevealGroup>
+      )}
+    </section>
+  );
+}
+
 function CoordinacionBody() {
+  const [students, setStudents] = useState<AdminStudentDto[]>([]);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [courseId, setCourseId] = useState<string>("");
@@ -121,13 +202,14 @@ function CoordinacionBody() {
       if (active) setColdStart(true);
     }, COLD_START_MS);
 
-    api
-      .allAttendance(courseId ? { courseId } : undefined)
-      .then((data) => {
-        if (active) setRecords(data);
+    Promise.all([api.listStudents(courseId || undefined), api.allAttendance(courseId ? { courseId } : undefined)])
+      .then(([studentList, data]) => {
+        if (!active) return;
+        setStudents(studentList);
+        setRecords(data);
       })
       .catch(() => {
-        if (active) setError("No se pudieron cargar los registros.");
+        if (active) setError("No se pudieron cargar los estudiantes y registros.");
       })
       .finally(() => {
         if (active) {
@@ -179,12 +261,18 @@ function CoordinacionBody() {
           ))}
         </select>
 
+        {!loading && !error && <StudentsSection students={students} records={records} />}
+
+        {!loading && !error && (
+          <h2 className="mb-2.5 text-lg font-extrabold text-foreground">Registros de asistencia</h2>
+        )}
+
         {!loading && !error && records.length > 0 && <Summary records={records} />}
 
         {loading && (
           <div className="flex flex-col items-center gap-2 py-8">
             <Mascot who="gali" mood="running" size={90} />
-            <p className="font-bold text-foreground-muted">Cargando registros...</p>
+            <p className="font-bold text-foreground-muted">Cargando estudiantes y registros...</p>
             {coldStart && (
               <p className="text-center text-xs font-semibold text-foreground-muted">
                 El servidor está despertando, puede tardar unos segundos.
@@ -227,7 +315,7 @@ function CoordinacionBody() {
         )}
 
         {!loading && !error && records.length === 0 && (
-          <p className="text-center font-bold text-foreground-muted">Sin registros para este filtro.</p>
+          <p className="text-center font-bold text-foreground-muted">Sin registros de asistencia para este filtro.</p>
         )}
       </div>
     </main>
