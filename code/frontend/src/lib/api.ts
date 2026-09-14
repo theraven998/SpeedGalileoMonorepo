@@ -94,11 +94,6 @@ export const api = {
 
   courses: () => request<Course[]>("/api/courses"),
 
-  signupEstudiante: (data: { name: string; email: string; password: string; courseId: string; code: string }) =>
-    request<{ token: string; user: AuthUser }>("/api/auth/signup-estudiante", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
 
   changeMyPassword: (body: ChangePasswordRequest) =>
     request<void>("/api/auth/me/password", { method: "PATCH", body: JSON.stringify(body) }),

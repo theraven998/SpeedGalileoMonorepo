@@ -110,10 +110,10 @@ function QuienesSon() {
 
 const PASOS = [
   {
-    emoji: "📱",
+    emoji: "🪪",
     bg: "bg-[#ddf4ff]",
-    title: "1. Regístrate",
-    text: "Elige tu curso y escribe el código de invitación que te dieron.",
+    title: "1. Recibe tu carnet",
+    text: "Coordinación te registra y te entrega tu carnet con código QR.",
   },
   {
     emoji: "🎫",
@@ -255,10 +255,10 @@ function Final() {
           ¿Listo para sumar por tu curso?
         </h2>
         <p className="mx-auto mt-2.5 max-w-sm font-semibold text-foreground-muted">
-          Solo necesitas el código de invitación de tu salón.
+          Coordinación crea tu cuenta y te entrega tu carnet QR.
         </p>
-        <Link href="/registro" className="btn-3d mt-6 inline-block" onClick={() => playTap()}>
-          Crear mi cuenta
+        <Link href="/login" className="btn-3d mt-6 inline-block" onClick={() => playTap()}>
+          Ingresar
         </Link>
       </section>
     </Reveal>

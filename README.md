@@ -12,14 +12,13 @@ Sistema de registro de puntualidad con QR y ranking por curso — Gimnasio Galil
 
 - **Profesor**: escanea el QR del estudiante en portería (`/porteria`) con la cámara del dispositivo.
 - **Coordinación**: ve el detalle individual de asistencia (`/coordinacion`) y registra usuarios (`/api/auth/register`).
-- **Estudiante**: se autorregistra en `/registro` con el código de invitación de su curso, ve su historial y el ranking de los tres cursos (`/estudiante`).
+- **Estudiante**: coordinación crea su cuenta en `/coordinacion/estudiantes` con una contraseña temporal; en su primer ingreso debe cambiarla. Ve su historial, su QR y el ranking (`/estudiante`). No existe autorregistro.
 - **Público**: landing (`/`) y tablero de ranking sin login (`/ranking`), nunca muestra nombres individuales.
 
 El rol se detecta solo al iniciar sesión — el backend lo devuelve en la respuesta de `/api/auth/login` y el frontend redirige automáticamente a `/porteria`, `/coordinacion` o `/estudiante` según corresponda (ver `ROLE_HOME` en `code/frontend/src/lib/api.ts`).
 
 ### Autorregistro de estudiantes
 
-`STUDENT_SIGNUP_CODES` en `code/backend/.env` define un código de invitación por curso (formato `Curso:CODIGO,Curso2:CODIGO2`). El estudiante elige su curso y escribe el código en `/registro`; sin el código correcto para ese curso, el backend rechaza el registro (403). Rota los códigos ahí cuando quieras invalidar los anteriores.
 
 ## Arranque local
 

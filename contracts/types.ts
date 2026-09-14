@@ -73,14 +73,6 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
-export interface SignupEstudianteRequest {
-  name: string;
-  email: string;
-  password: string;
-  courseId: string;
-  invitationCode: string;
-}
-
 export interface MeResponse {
   id: string;
   name: string;

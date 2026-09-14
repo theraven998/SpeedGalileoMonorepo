@@ -12,7 +12,6 @@ runtime de servidor está fuera de contrato.
 | `/` | 🌐 | Landing. Explica el piloto y enlaza a ranking y login |
 | `/ranking` | 🌐 | Tablero por curso, solo intervención, sin nombres |
 | `/login` | 🌐 | Ingreso. Redirige según rol |
-| `/registro` | 🌐 | Autorregistro de estudiante con código de invitación |
 | `/perfil` | 👤 | **Nuevo.** Datos, cambio de contraseña, cerrar sesión |
 | `/perfil/carnet` | 🎓 | **Nuevo.** QR a pantalla completa, listo para escanear o imprimir |
 | `/estudiante` | 🎓 | Historial propio y ranking |

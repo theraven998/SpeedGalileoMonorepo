@@ -51,9 +51,6 @@ export function PublicNavbar() {
 
         <div className="hidden items-center gap-3 sm:flex">
           <SoundToggle />
-          <Link href="/registro" className="btn-3d btn-3d-outline px-5 py-2.5 text-xs" onClick={() => playTap()}>
-            Soy estudiante
-          </Link>
           <Link href="/login" className="btn-3d px-5 py-2.5 text-xs" onClick={() => playTap()}>
             Iniciar sesión
           </Link>
@@ -76,16 +73,6 @@ export function PublicNavbar() {
       {open && (
         <div className="border-t-2 border-border bg-surface px-4 py-4 sm:hidden">
           <div className="flex flex-col gap-3">
-            <Link
-              href="/registro"
-              onClick={() => {
-                playTap();
-                setOpen(false);
-              }}
-              className="btn-3d btn-3d-outline w-full py-3 text-center text-xs"
-            >
-              Soy estudiante
-            </Link>
             <Link
               href="/login"
               onClick={() => {

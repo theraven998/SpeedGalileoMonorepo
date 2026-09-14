@@ -159,9 +159,6 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-6 flex justify-center gap-5 text-sm font-bold">
-              <Link href="/registro" className="text-primary">
-                Soy estudiante
-              </Link>
               <Link href="/ranking" className="text-primary">
                 Ver ranking
               </Link>

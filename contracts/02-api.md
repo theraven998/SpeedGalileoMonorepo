@@ -18,13 +18,6 @@ Leyenda de acceso: 🌐 público · 👤 autenticado · 🎓 estudiante · 🏫 
 // 401 credenciales inválidas · 403 usuario inactivo
 ```
 
-### `POST /api/auth/signup-estudiante` 🌐
-Autorregistro con código de invitación del curso.
-```jsonc
-{ "name","email","password","courseId","invitationCode" }
-// 201 igual que login · 403 código inválido · 409 email ya existe
-```
-
 ### `GET /api/auth/me` 👤
 ```jsonc
 { "id","name","email","role","course": { "id","name" } | null,
@@ -120,7 +113,8 @@ Importación idempotente: una fila que choca con el índice único se cuenta en
 ## Coordinación — cursos y estudiantes
 
 ### `GET /api/courses` 🌐
-Público porque el formulario de autorregistro lo necesita sin login.
+Público: solo expone nombres de curso. No existe autorregistro: toda cuenta de
+estudiante la crea coordinación con `POST /api/students`.
 ```jsonc
 [ { "id","name" } ]
 ```
@@ -136,7 +130,7 @@ el experimento.
 
 ### `POST /api/students` 🗂
 Alta individual hecha por coordinación. Los estudiantes no usan celular en el
-colegio, así que el alta no depende del autorregistro.
+colegio. Es la **única** vía de alta de estudiantes: no hay autorregistro público.
 ```jsonc
 // req
 { "name":"string", "email":"string", "document":"string", "courseId":"string" }
@@ -210,8 +204,7 @@ Columnas: `curso,grupo,estudiante,email,day,status,points,minutesLate,justified,
 
 ## Reglas transversales
 
-- **Rate limit**: `POST /api/auth/login` y `POST /api/auth/signup-estudiante`
-  limitados a 10 intentos por IP cada 15 minutos.
+- **Rate limit**: `POST /api/auth/login` limitado a 10 intentos por IP cada 15 minutos.
 - **401 en el cliente**: cualquier `401` borra el token y redirige a `/login`.
 - **Cold start**: el frontend asume que la primera petición tras inactividad
   puede tardar 50 segundos. No hay timeout menor a 60 s en el cliente.

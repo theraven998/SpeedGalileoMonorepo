@@ -152,11 +152,11 @@ export function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7, duration: 0.5 }}
           >
-            <Link href="/registro" className="btn-3d animate-shine" onClick={() => playTap()}>
-              Empezar ahora
+            <Link href="/login" className="btn-3d animate-shine" onClick={() => playTap()}>
+              Ingresar
             </Link>
-            <Link href="/login" className="btn-3d btn-3d-outline" onClick={() => playTap()}>
-              Ya tengo cuenta
+            <Link href="/ranking" className="btn-3d btn-3d-outline" onClick={() => playTap()}>
+              Ver ranking
             </Link>
           </motion.div>
         </div>

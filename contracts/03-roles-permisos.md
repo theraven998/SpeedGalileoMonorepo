@@ -12,7 +12,6 @@ su rol explícitamente con `requireRole`.
 | Ruta | 🌐 | 🎓 estudiante | 🏫 profesor | 🗂 coordinación |
 |---|:--:|:--:|:--:|:--:|
 | `POST /auth/login` | ✅ | ✅ | ✅ | ✅ |
-| `POST /auth/signup-estudiante` | ✅ | — | — | — |
 | `POST /auth/register` | ❌ | ❌ | ❌ | ✅ |
 | `GET /auth/me` | ❌ | ✅ | ✅ | ✅ |
 | `PATCH /auth/me` | ❌ | ✅ | ✅ | ✅ |
@@ -70,5 +69,5 @@ Los estudiantes del piloto son menores. Reglas no negociables:
 
 - `helmet` activo.
 - CORS restringido al dominio de Firebase Hosting, sin comodín.
-- Rate limit en login y autorregistro.
+- Rate limit en login.
 - El backend rechaza arrancar sin `JWT_SECRET` ni `MONGO_URI`.

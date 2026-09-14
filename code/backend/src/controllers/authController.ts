@@ -5,7 +5,6 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { env } from "@/config/env.js";
 import { UserModel, ROLES, type User } from "@/models/User.js";
-import { CourseModel } from "@/models/Course.js";
 
 function signToken(user: User): string {
   return jwt.sign(
@@ -98,55 +97,6 @@ export async function register(req: Request, res: Response): Promise<void> {
     role: user.role,
     qrToken: user.qrToken,
   });
-}
-
-const signupEstudianteSchema = z.object({
-  name: z.string().min(1),
-  email: z.string().email(),
-  password: z.string().min(6),
-  courseId: z.string().min(1),
-  code: z.string().min(1),
-});
-
-// Autorregistro público de estudiantes: requiere el código de invitación del curso.
-export async function signupEstudiante(req: Request, res: Response): Promise<void> {
-  const parsed = signupEstudianteSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Datos inválidos", details: parsed.error.flatten() });
-    return;
-  }
-
-  const { name, email, password, courseId, code } = parsed.data;
-
-  const course = await CourseModel.findById(courseId);
-  if (!course) {
-    res.status(400).json({ error: "Curso inválido" });
-    return;
-  }
-
-  const expectedCode = env.studentSignupCodes[course.name.toLowerCase()];
-  if (!expectedCode || code !== expectedCode) {
-    res.status(403).json({ error: "Código de invitación incorrecto para ese curso" });
-    return;
-  }
-
-  const exists = await UserModel.findOne({ email });
-  if (exists) {
-    res.status(409).json({ error: "Email ya registrado" });
-    return;
-  }
-
-  const passwordHash = await bcrypt.hash(password, 10);
-  const user = await UserModel.create({
-    name,
-    email,
-    passwordHash,
-    role: "estudiante",
-    course: course._id,
-    qrToken: randomUUID(),
-  });
-
-  res.status(201).json({ token: signToken(user), user: toAuthUser(user) });
 }
 
 const changePasswordSchema = z.object({
