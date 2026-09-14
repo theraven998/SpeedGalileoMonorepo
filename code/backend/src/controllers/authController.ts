@@ -24,6 +24,7 @@ function toAuthUser(user: User) {
     course: user.course,
     // solo tiene sentido pa' estudiantes: es lo que muestran pa' que los escaneen en portería
     qrToken: user.role === "estudiante" ? user.qrToken : undefined,
+    mustChangePassword: user.mustChangePassword ?? false,
   };
 }
 
@@ -146,4 +147,47 @@ export async function signupEstudiante(req: Request, res: Response): Promise<voi
   });
 
   res.status(201).json({ token: signToken(user), user: toAuthUser(user) });
+}
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string(),
+});
+
+// Cualquier rol cambia su propia contraseña. Obligatorio tras un alta de coordinación.
+export async function changeMyPassword(req: Request, res: Response): Promise<void> {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Datos inválidos", details: parsed.error.flatten() });
+    return;
+  }
+
+  const { currentPassword, newPassword } = parsed.data;
+  if (newPassword.length < 8) {
+    res.status(400).json({ error: "La nueva contraseña debe tener al menos 8 caracteres" });
+    return;
+  }
+
+  const user = await UserModel.findById(req.user!.sub);
+  if (!user) {
+    res.status(401).json({ error: "Usuario no encontrado" });
+    return;
+  }
+
+  const currentValid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!currentValid) {
+    res.status(401).json({ error: "La contraseña actual no coincide" });
+    return;
+  }
+
+  const sameAsCurrent = await bcrypt.compare(newPassword, user.passwordHash);
+  if (sameAsCurrent) {
+    res.status(400).json({ error: "La nueva contraseña debe ser distinta a la actual" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await UserModel.updateOne({ _id: user._id }, { $set: { passwordHash, mustChangePassword: false } });
+
+  res.status(204).end();
 }
