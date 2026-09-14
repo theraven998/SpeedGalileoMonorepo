@@ -1,0 +1,57 @@
+Implementa una cola offline-safe para el escaneo de asistencia en SpeedGalileo,
+protegiendo contra pérdida de datos por cold-start del backend (Render free
+tier duerme tras 15min sin tráfico, primer request tras eso tarda 30-50s) o
+cortes de red momentáneos en el celular del profesor en portería.
+
+CONTEXTO DEL PROYECTO
+- Monorepo: ~/Proyects/GradoDiegui (github.com/theraven998/SpeedGalileoMonorepo)
+- Frontend: code/frontend, Next.js 16 App Router, TODO client components ("use
+  client"), deploy estático (output: "export") a Firebase Hosting
+  (https://speedgalileo-galileo.web.app)
+- Backend: code/backend, Express+TS+Mongoose, deploy en Render free
+  (https://speedgalileomonorepo.onrender.com), Mongo Atlas M0
+- Cliente API único: code/frontend/src/lib/api.ts — función request<T>() que
+  envuelve fetch, lanza ApiError en !res.ok
+- Endpoint crítico a proteger: POST /api/attendance/scan (profesor escanea QR
+  del estudiante en /porteria, code/frontend/src/app/porteria/page.tsx) —
+  perder este write significa asistencia no registrada, sin forma de saber
+  que se perdió.
+- El backend YA es idempotente para este endpoint: un estudiante solo puede
+  tener un registro por día, retry duplicado devuelve 409 "ya tiene registro
+  hoy" (ver code/backend/src/contro,
+  función scanQr). NO agregues idema 409 como
+  éxito silencioso en el retry (ya quedó registrado, probablemente por un
+  intento anterior que sí llegó per
+
+ALCANCE (no lo expandas a todo el api.ts, solo el write que importa)
+1. En el flujo de /porteria: si el alla (error
+   de red, timeout, 5xx, o el fetchrazonable),
+   guardar el intento pendiente en localStorage (qrToken + timestamp local +
+   intento count) en vez de solo mo
+2. Reintentar automáticamente: al rcada N
+   segundos mientras haya pendientes, y al volver a abrir/enfocar la pestaña.
+   Backoff simple (no hace falta ex-10s basta).
+3. Tratar 409 del retry como succeesacarlo de
+   la cola — no mostrarlo como error al profesor.
+4. UI en /porteria: indicador simplizar" visible
+   mientras haya cola sin vaciar, y vacía.
+5. Al hacer un scan nuevo con cola pendiente, dejar seguir escaneando
+   (no bloquear la UI esperando conofesor no
+   debe frenar su fila por un backe
+
+NO HAGAS
+- No apliques esta lógica a lectura) — solo al
+  write de asistencia, que es lo único con riesgo real de pérdida.
+- No metas Service Worker/PWA complocalStorage +
+  eventos online/focus no alcanzan ara este caso.
+- No cambies el modelo de datos ni agregues idempotency key al backend — ya
+  existe vía el índice único día+estudiante.
+
+VERIFICA AL TERMINAR
+- Simula el escenario real: corta red (DevTools offline o apagar backend),
+  escanea 2-3 QRs, reconecta, confiicados y sin
+  que el profesor tuviera que hacer
+- Simula cold-start: primer request tras rato de inactividad tarda ~30-50s;
+  confirma que la cola no descarta uro.
+- pnpm build (con NEXT_OUTPUT_EXPORport estático
+  limpio, sin usar APIs de servidor no disponibles en ese modo.
