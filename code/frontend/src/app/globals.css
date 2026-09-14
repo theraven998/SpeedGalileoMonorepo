@@ -111,6 +111,12 @@ body {
     cursor: not-allowed;
     opacity: 0.6;
   }
+  .btn-3d:hover:not(:disabled) {
+    transform: translateY(-1px) scale(1.015);
+  }
+  .btn-3d:active:not(:disabled) {
+    transform: translateY(4px) scale(1);
+  }
 
   .btn-3d-outline {
     background: var(--surface);
@@ -254,6 +260,99 @@ body {
     transform: translateY(-8px);
   }
 }
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-8deg);
+  }
+  40% {
+    transform: rotate(7deg);
+  }
+  60% {
+    transform: rotate(-5deg);
+  }
+  80% {
+    transform: rotate(3deg);
+  }
+}
+@keyframes jelly {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  25% {
+    transform: scale(1.04, 0.94);
+  }
+  50% {
+    transform: scale(0.96, 1.06);
+  }
+  75% {
+    transform: scale(1.02, 0.98);
+  }
+}
+@keyframes shine-sweep {
+  0% {
+    background-position: -150% 0;
+  }
+  100% {
+    background-position: 250% 0;
+  }
+}
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(88, 204, 2, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(88, 204, 2, 0);
+  }
+}
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes flame {
+  0%,
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08, 0.94) translateY(-1px);
+    opacity: 0.85;
+  }
+}
+@keyframes shake-hard {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  15% {
+    transform: translateX(-14px) rotate(-3deg);
+  }
+  30% {
+    transform: translateX(12px) rotate(3deg);
+  }
+  45% {
+    transform: translateX(-10px) rotate(-2deg);
+  }
+  60% {
+    transform: translateX(8px) rotate(2deg);
+  }
+  75% {
+    transform: translateX(-4px) rotate(-1deg);
+  }
+  90% {
+    transform: translateX(4px) rotate(1deg);
+  }
+}
 
 @layer utilities {
   .animate-float {
@@ -270,6 +369,47 @@ body {
   }
   .animate-bounce-sm {
     animation: bounce-sm 0.6s ease-in-out infinite;
+  }
+  .animate-wiggle {
+    animation: wiggle 0.6s ease-in-out;
+  }
+  .animate-jelly {
+    animation: jelly 0.6s ease-in-out;
+  }
+  /* Brillo que barre por encima del contenido (botones primarios, títulos). */
+  .animate-shine {
+    position: relative;
+    overflow: hidden;
+  }
+  .animate-shine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(
+      120deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.65) 50%,
+      transparent 65%
+    );
+    background-size: 220% 100%;
+    background-repeat: no-repeat;
+    background-position: -150% 0;
+    animation: shine-sweep 2.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .animate-pulse-glow {
+    animation: pulse-glow 1.8s ease-out infinite;
+  }
+  .animate-spin-slow {
+    animation: spin-slow 8s linear infinite;
+  }
+  .animate-flame {
+    display: inline-block;
+    transform-origin: bottom center;
+    animation: flame 0.5s ease-in-out infinite;
+  }
+  .animate-shake-hard {
+    animation: shake-hard 0.5s ease-in-out;
   }
   .fade-up-1 {
     animation-delay: 0.05s;
@@ -291,10 +431,23 @@ body {
   .animate-pop,
   .animate-shake,
   .animate-fade-up,
-  .animate-bounce-sm {
+  .animate-bounce-sm,
+  .animate-wiggle,
+  .animate-jelly,
+  .animate-pulse-glow,
+  .animate-spin-slow,
+  .animate-flame,
+  .animate-shake-hard {
     animation: none;
+  }
+  .animate-shine::after {
+    animation: none;
+    display: none;
   }
   .prog-bar > i {
     transition: none;
+  }
+  .btn-3d:hover:not(:disabled) {
+    transform: none;
   }
 }

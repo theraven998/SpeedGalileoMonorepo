@@ -13,7 +13,7 @@ import requests
 AQUI = Path(__file__).resolve().parent
 REF = AQUI / "ref"
 SALIDA = AQUI / "personajes"
-ENV = Path("/home/raven/Proyects/CarrouselerIA/.env")
+ENV = Path("/home/raven/Proyects/Personal/CarrouselerIA/.env")
 
 KIE = "https://api.kie.ai"
 KIE_UP = "https://kieai.redpandaai.co"

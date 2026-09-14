@@ -1,3 +1,11 @@
+import type {
+  AdminCourseDto,
+  AdminStudentDto,
+  ChangePasswordRequest,
+  CreateStudentRequest,
+  CreateStudentResponse,
+} from "@/lib/contracts";
+
 // Vacío por defecto = mismo origen (ver next.config.ts rewrites hacia el backend).
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -22,11 +30,23 @@ export interface AuthUser {
   course?: string;
   /** Solo presente si role === "estudiante": el código que lo identifica al escanear en portería. */
   qrToken?: string;
+  /** true mientras el usuario no cambie la contraseña temporal asignada al crear la cuenta. */
+  mustChangePassword: boolean;
 }
 
+export type AttendanceStatus = "temprano" | "a_tiempo" | "tarde";
+
 class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  /** Cuerpo de la respuesta ya parseado (p. ej. `existing` del 409 de /attendance/scan). */
+  public body?: unknown;
+
+  constructor(
+    public status: number,
+    message: string,
+    body?: unknown
+  ) {
     super(message);
+    this.body = body;
   }
 }
 
@@ -44,8 +64,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new ApiError(res.status, body.error ?? "Error desconocido");
+    const message = body && typeof body === "object" && "error" in body ? String((body as { error: unknown }).error) : "Error desconocido";
+    throw new ApiError(res.status, message, body);
   }
+
+  if (res.status === 204) return undefined as T;
 
   return res.json() as Promise<T>;
 }
@@ -58,10 +81,7 @@ export const api = {
     }),
 
   scanQr: (qrToken: string) =>
-    request<{ student: { id: string; name: string }; status: string; points: number; scannedAt: string }>(
-      "/api/attendance/scan",
-      { method: "POST", body: JSON.stringify({ qrToken }) }
-    ),
+    request<ScanResponse>("/api/attendance/scan", { method: "POST", body: JSON.stringify({ qrToken }) }),
 
   myAttendance: () => request<AttendanceRecord[]>("/api/attendance/me"),
 
@@ -79,27 +99,72 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  changeMyPassword: (body: ChangePasswordRequest) =>
+    request<void>("/api/auth/me/password", { method: "PATCH", body: JSON.stringify(body) }),
+
+  adminCourses: () => request<AdminCourseDto[]>("/api/courses/admin"),
+
+  createStudent: (body: CreateStudentRequest) =>
+    request<CreateStudentResponse>("/api/students", { method: "POST", body: JSON.stringify(body) }),
+
+  listStudents: (courseId?: string) => {
+    const qs = courseId ? `?courseId=${courseId}` : "";
+    return request<AdminStudentDto[]>(`/api/students${qs}`);
+  },
 };
 
 export interface Course {
-  _id: string;
+  id: string;
   name: string;
 }
 
+/**
+ * Documentos crudos de Mongo (con `_id`), tal como los devuelven
+ * `GET /api/attendance/me` y `GET /api/attendance`.
+ */
 export interface AttendanceRecord {
   _id: string;
   student: { _id: string; name: string; email: string } | string;
   course: { _id: string; name: string };
+  day: string;
   scannedAt: string;
-  status: "temprano" | "a_tiempo" | "tarde";
+  status: AttendanceStatus;
   points: number;
+  minutesLate: number;
+  source: "qr" | "manual" | "import";
+  justified: boolean;
 }
 
 export interface RankingEntry {
   courseId: string;
   courseName: string;
-  avgPoints: number;
-  registros: number;
+  /** 0..1. */
+  pctPuntual: number;
+  diasEvaluados: number;
+  posicion: number;
+}
+
+/** 201 de `POST /api/attendance/scan`. */
+export interface ScanResponse {
+  student: { id: string; name: string };
+  course: { id: string; name: string };
+  day: string;
+  status: AttendanceStatus;
+  points: number;
+  minutesLate: number;
+  scannedAt: string;
+}
+
+/** Cuerpo del 409 de `POST /api/attendance/scan` (disponible en `ApiError.body`). */
+export interface ScanConflictBody {
+  error: string;
+  existing: {
+    day: string;
+    status: AttendanceStatus;
+    points: number;
+    scannedAt: string;
+  };
 }
 
 export { ApiError };

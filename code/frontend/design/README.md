@@ -26,7 +26,7 @@ python3 assets/gen_kie.py            # los tres
 python3 assets/gen_kie.py duo        # solo uno
 ```
 
-La clave sale de `~/Proyects/CarrouselerIA/.env` (`KIE_API_KEY`).
+La clave sale de `~/Proyects/Personal/CarrouselerIA/.env` (`KIE_API_KEY`).
 Referencias en `assets/ref/`: recorte de la cara de Diego y dos fotos del uniforme.
 Fondo blanco quitado con ImageMagick (floodfill desde las esquinas, fuzz 4%).
 

@@ -24,6 +24,8 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   /** Guarda una sesión ya creada (ej. tras autorregistro de estudiante) y redirige a su home. */
   setSession: (token: string, sessionUser: AuthUser) => void;
+  /** Aplica cambios parciales al usuario en sesión y los persiste en localStorage. */
+  updateUser: (patch: Partial<AuthUser>) => void;
   logout: () => void;
 }
 
@@ -53,6 +55,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(token, loggedUser);
   }
 
+  function updateUser(patch: Partial<AuthUser>) {
+    setUser((current) => {
+      if (!current) return current;
+      const next = { ...current, ...patch };
+      localStorage.setItem("user", JSON.stringify(next));
+      return next;
+    });
+  }
+
   function logout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -61,7 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, setSession, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, login, setSession, updateUser, logout }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

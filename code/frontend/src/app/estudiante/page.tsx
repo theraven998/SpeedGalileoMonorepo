@@ -1,23 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RouteGuard } from "@/components/RouteGuard";
 import { AppHeader } from "@/components/AppHeader";
 import { RankingRow } from "@/components/RankingRow";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError, type AttendanceRecord, type RankingEntry } from "@/lib/api";
-
-const STATUS_LABEL: Record<string, string> = {
-  temprano: "Temprano",
-  a_tiempo: "A tiempo",
-  tarde: "Tarde",
-};
-const STATUS_BADGE: Record<string, string> = {
-  temprano: "badge-status badge-status--g",
-  a_tiempo: "badge-status badge-status--y",
-  tarde: "badge-status badge-status--r",
-};
+import { Mascot, OutcomeOverlay, playLevelUp, cannons, type MascotMood } from "@/components/fx";
+import { ProgressHeader } from "@/components/estudiante/ProgressHeader";
+import { StreakFlame } from "@/components/estudiante/StreakFlame";
+import { AttendancePath } from "@/components/estudiante/AttendancePath";
+import { Badges } from "@/components/estudiante/Badges";
+import { QrCard } from "@/components/estudiante/QrCard";
+import { XP_PER_LEVEL, bogotaToday, computeStreak, computeBadges } from "@/components/estudiante/gamification";
 
 function StudentBody() {
   const { user } = useAuth();
@@ -25,6 +20,9 @@ function StudentBody() {
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [outcomeVisible, setOutcomeVisible] = useState(false);
+  const levelUpPendingRef = useRef(false);
+  const outcomeCheckedRef = useRef(false);
 
   useEffect(() => {
     Promise.all([api.myAttendance(), api.ranking()])
@@ -38,23 +36,94 @@ function StudentBody() {
       .finally(() => setLoading(false));
   }, []);
 
+  const todayStr = useMemo(() => bogotaToday(), []);
+  const todayRecord = useMemo(() => history.find((r) => r.day === todayStr) ?? null, [history, todayStr]);
+  const sortedAsc = useMemo(
+    () => [...history].sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0)),
+    [history]
+  );
+  const latestRecord = sortedAsc[sortedAsc.length - 1] ?? null;
+
+  const xpTotal = useMemo(() => history.reduce((sum, r) => sum + r.points, 0), [history]);
+  const xpBeforeToday = xpTotal - (todayRecord?.points ?? 0);
+  const level = Math.floor(xpTotal / XP_PER_LEVEL) + 1;
+  const levelBefore = Math.floor(xpBeforeToday / XP_PER_LEVEL) + 1;
+  const leveledUpToday = Boolean(todayRecord) && level > levelBefore;
+  const xpInLevel = xpTotal % XP_PER_LEVEL;
+
+  const streakInfo = useMemo(() => computeStreak(history), [history]);
+  const badges = useMemo(
+    () => computeBadges(history, xpTotal, streakInfo.count),
+    [history, xpTotal, streakInfo.count]
+  );
+
+  // Al entrar por primera vez el día de hoy con un registro de hoy: mostrar el resultado en pantalla completa.
+  useEffect(() => {
+    if (loading || !todayRecord || outcomeCheckedRef.current) return;
+    outcomeCheckedRef.current = true;
+
+    const key = `sg-seen-${todayStr}`;
+    try {
+      if (localStorage.getItem(key)) return;
+    } catch {
+      // almacenamiento no disponible: mostrar de todas formas
+    }
+    levelUpPendingRef.current = leveledUpToday;
+    // Lectura única de localStorage tras cargar los datos: no hay forma de sincronizar esto durante el render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOutcomeVisible(true);
+  }, [loading, todayRecord, todayStr, leveledUpToday]);
+
+  function handleOutcomeDone() {
+    setOutcomeVisible(false);
+    try {
+      localStorage.setItem(`sg-seen-${todayStr}`, "1");
+    } catch {
+      // almacenamiento no disponible: ignorar
+    }
+    if (levelUpPendingRef.current) {
+      levelUpPendingRef.current = false;
+      setTimeout(() => {
+        playLevelUp();
+        cannons();
+      }, 250);
+    }
+  }
+
+  const mascotMood: MascotMood = loading
+    ? "running"
+    : error
+      ? "shocked"
+      : !latestRecord
+        ? "idle"
+        : streakInfo.count >= 3
+          ? "cheer"
+          : latestRecord.status === "tarde"
+            ? "sad"
+            : "happy";
+
+  // user.course es el id del curso, no el nombre: sin registros no hay nombre que mostrar.
+  const courseName = latestRecord?.course.name ?? "";
+
   return (
-    <main className="flex flex-1 flex-col gap-9 px-4 py-7">
-      {user?.qrToken && (
-        <section className="mx-auto w-full max-w-sm">
-          <h2 className="mb-3 text-xs font-extrabold uppercase tracking-widest text-foreground-muted">
-            Mi código QR
-          </h2>
-          <div className="card-hard flex flex-col items-center gap-3 p-6">
-            <div className="rounded-2xl border-2 border-border bg-white p-3">
-              <QRCodeSVG value={user.qrToken} size={200} />
-            </div>
-            <p className="text-center text-sm font-semibold text-foreground-muted">
-              Muéstralo en portería para que te lo escaneen
-            </p>
-          </div>
-        </section>
+    <main className="flex flex-1 flex-col gap-8 px-4 py-6 pb-16">
+      {outcomeVisible && todayRecord && (
+        <OutcomeOverlay
+          status={todayRecord.status}
+          points={todayRecord.points}
+          minutesLate={todayRecord.minutesLate}
+          onDone={handleOutcomeDone}
+        />
       )}
+
+      <div className="mx-auto flex w-full max-w-sm items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Mascot who="gali" mood={mascotMood} size={72} />
+          {!loading && !error && history.length === 0 && (
+            <p className="text-sm font-bold text-foreground-muted">¡Tu primer escaneo te espera!</p>
+          )}
+        </div>
+      </div>
 
       {error && <p className="mx-auto w-full max-w-sm text-center text-sm font-bold text-danger">{error}</p>}
 
@@ -62,6 +131,21 @@ function StudentBody() {
 
       {!loading && (
         <>
+          {user?.qrToken && <QrCard token={user.qrToken} name={user.name} course={courseName} />}
+
+          <ProgressHeader xpTotal={xpTotal} level={level} xpInLevel={xpInLevel} />
+
+          <StreakFlame streak={streakInfo.count} isOff={streakInfo.isOff} />
+
+          <section className="mx-auto w-full max-w-sm">
+            <h2 className="mb-3 text-xs font-extrabold uppercase tracking-widest text-foreground-muted">
+              Mi historial
+            </h2>
+            <AttendancePath records={history} />
+          </section>
+
+          <Badges badges={badges} />
+
           <section className="mx-auto w-full max-w-sm">
             <h2 className="mb-3 text-xs font-extrabold uppercase tracking-widest text-foreground-muted">
               Ranking de cursos
@@ -74,42 +158,6 @@ function StudentBody() {
                 <RankingRow key={r.courseId} entry={r} position={i} />
               ))}
             </ul>
-          </section>
-
-          <section className="mx-auto w-full max-w-sm">
-            <h2 className="mb-3 text-xs font-extrabold uppercase tracking-widest text-foreground-muted">
-              Mi historial
-            </h2>
-            {history.length === 0 && !error && (
-              <p className="text-sm font-semibold text-foreground-muted">Sin registros aún.</p>
-            )}
-            <ul className="space-y-2.5">
-              {history.map((r) => (
-                <li
-                  key={r._id}
-                  className="card-hard flex items-center justify-between px-4 py-3"
-                >
-                  <span className="text-sm font-semibold text-foreground-muted">
-                    {new Date(r.scannedAt).toLocaleDateString("es-CO")}{" "}
-                    {new Date(r.scannedAt).toLocaleTimeString("es-CO")}
-                  </span>
-                  <span className={STATUS_BADGE[r.status]}>
-                    {STATUS_LABEL[r.status]} · {r.points} pts
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-4 flex items-center justify-center gap-4 text-xs font-extrabold uppercase tracking-wide text-foreground-muted">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-verde" /> 3 pts
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-amarillo" /> 2 pts
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-rojo" /> 0 pts
-              </span>
-            </p>
           </section>
         </>
       )}
