@@ -2,19 +2,19 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { api, isRole, ROLE_HOME, type AuthUser } from "./api";
+import { api, clearSession, isRole, isTokenExpired, ROLE_HOME, type AuthUser } from "./api";
 
 function readStoredUser(): AuthUser | null {
   const stored = localStorage.getItem("user");
+  const token = localStorage.getItem("token");
   if (!stored) return null;
   try {
     const parsed = JSON.parse(stored);
-    if (parsed && isRole(parsed.role)) return parsed as AuthUser;
+    if (parsed && isRole(parsed.role) && token && !isTokenExpired(token)) return parsed as AuthUser;
   } catch {
     /* JSON corrupto */
   }
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  clearSession();
   return null;
 }
 
@@ -65,8 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearSession();
     setUser(null);
     router.push("/login");
   }

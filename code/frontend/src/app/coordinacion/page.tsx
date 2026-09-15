@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { RouteGuard } from "@/components/RouteGuard";
 import { AppHeader } from "@/components/AppHeader";
-import { api, type AttendanceRecord, type AttendanceStatus, type Course } from "@/lib/api";
+import { api, ApiError, type AttendanceRecord, type AttendanceStatus, type Course } from "@/lib/api";
 import type { AdminStudentDto } from "@/lib/contracts";
 import { CountUp, Mascot, RevealGroup, RevealItem, useReducedMotion } from "@/components/fx";
 
@@ -208,8 +208,13 @@ function CoordinacionBody() {
         setStudents(studentList);
         setRecords(data);
       })
-      .catch(() => {
-        if (active) setError("No se pudieron cargar los estudiantes y registros.");
+      .catch((err) => {
+        if (active)
+          setError(
+            err instanceof ApiError
+              ? `No se pudieron cargar los estudiantes y registros: ${err.message}`
+              : "No se pudieron cargar los estudiantes y registros (sin conexión con el servidor)."
+          );
       })
       .finally(() => {
         if (active) {

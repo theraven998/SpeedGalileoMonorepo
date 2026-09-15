@@ -50,6 +50,21 @@ class ApiError extends Error {
   }
 }
 
+export function clearSession(): void {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+}
+
+/** true si el JWT no se puede leer o su `exp` ya pasó. */
+export function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof payload.exp === "number" && payload.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
@@ -63,6 +78,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!res.ok) {
+    // Token vencido/inválido fuera de /api/auth (ahí 401 = credenciales incorrectas): cerrar sesión.
+    if (res.status === 401 && token && !path.startsWith("/api/auth/") && typeof window !== "undefined") {
+      clearSession();
+      window.location.replace("/login");
+    }
     const body = await res.json().catch(() => ({ error: res.statusText }));
     const message = body && typeof body === "object" && "error" in body ? String((body as { error: unknown }).error) : "Error desconocido";
     throw new ApiError(res.status, message, body);
