@@ -11,7 +11,8 @@ import { SendingOverlay } from "@/components/porteria/SendingOverlay";
 import { SessionScoreboard, type ScanHistoryItem } from "@/components/porteria/SessionScoreboard";
 import { ClockBanner } from "@/components/porteria/ClockBanner";
 import { formatBogotaTime } from "@/components/porteria/bogotaTime";
-import type { ScanConfigResponse } from "@/lib/contracts";
+import type { ScanConfigResponse, DocumentLookupResponse } from "@/lib/contracts";
+import type { ScanResponse } from "@/lib/api";
 
 const SCANNER_ID = "qr-scanner-region";
 
@@ -55,6 +56,14 @@ function ScannerBody() {
   const [practice, setPractice] = useState(false);
   const [scanConfig, setScanConfig] = useState<ScanConfigResponse | null>(null);
 
+  // Panel "sin QR": busca por documento, muestra al estudiante y pide confirmación antes de registrar.
+  const [showDocPanel, setShowDocPanel] = useState(false);
+  const [docValue, setDocValue] = useState("");
+  const [docLookup, setDocLookup] = useState<DocumentLookupResponse | null>(null);
+  const [docError, setDocError] = useState<string | null>(null);
+  const [docLoading, setDocLoading] = useState(false);
+  const docInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     api.scanConfig().then(setScanConfig).catch(() => {});
   }, []);
@@ -85,18 +94,22 @@ function ScannerBody() {
     setPhase({ kind: "idle" });
   }
 
-  async function handleDecoded(qrToken: string) {
+  /** Núcleo compartido: escaneo por QR y registro por documento terminan en el mismo overlay/historial. */
+  async function runScan(fetcher: () => Promise<ScanResponse>, source: "qr" | "documento") {
     if (processingRef.current) return;
     processingRef.current = true;
     setPhase({ kind: "sending" });
 
     try {
-      const result = practiceRef.current ? await api.practiceScanQr(qrToken) : await api.scanQr(qrToken);
+      const result = await fetcher();
 
       setFrameColor(STATUS_FRAME_COLOR[result.status]);
       setStats((s) => ({ ...s, [result.status]: s[result.status] + 1 }));
       setHistory((h) =>
-        [{ id: `${result.scannedAt}-${result.student.id}`, name: result.student.name, status: result.status }, ...h].slice(0, 5)
+        [
+          { id: `${result.scannedAt}-${result.student.id}`, name: result.student.name, status: result.status, source },
+          ...h,
+        ].slice(0, 5)
       );
 
       if (result.status === "tarde") {
@@ -129,6 +142,51 @@ function ScannerBody() {
         setPhase({ kind: "error", message: err instanceof ApiError ? err.message : "Error al registrar" });
       }
     }
+  }
+
+  function handleDecoded(qrToken: string) {
+    void runScan(() => (practiceRef.current ? api.practiceScanQr(qrToken) : api.scanQr(qrToken)), "qr");
+  }
+
+  function openDocPanel() {
+    setShowDocPanel(true);
+    setDocValue("");
+    setDocLookup(null);
+    setDocError(null);
+  }
+
+  function closeDocPanel() {
+    setShowDocPanel(false);
+    setDocValue("");
+    setDocLookup(null);
+    setDocError(null);
+    setDocLoading(false);
+  }
+
+  async function handleSearchDocument() {
+    const trimmed = docValue.trim();
+    if (!trimmed || docLoading) return;
+
+    setDocLoading(true);
+    setDocError(null);
+    setDocLookup(null);
+
+    try {
+      const result = await api.lookupDocument(trimmed);
+      setDocLookup(result);
+    } catch (err) {
+      setDocError(err instanceof ApiError ? err.message : "Error al buscar el documento");
+    } finally {
+      setDocLoading(false);
+    }
+  }
+
+  async function handleConfirmDocument() {
+    if (!docLookup || processingRef.current) return;
+    const document = docValue.trim();
+    const wasPractice = practiceRef.current;
+    closeDocPanel();
+    await runScan(() => (wasPractice ? api.practiceScanDocument(document) : api.scanDocument(document)), "documento");
   }
 
   useEffect(() => {
@@ -174,6 +232,26 @@ function ScannerBody() {
     return () => clearTimeout(t);
   }, [phase]);
 
+  // Mientras el panel de documento está abierto, pausar la cámara: evita decodificar un QR de fondo.
+  useEffect(() => {
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+    try {
+      if (showDocPanel) {
+        if (scanner.getState() === Html5QrcodeScannerState.SCANNING) scanner.pause(true);
+      } else if (scanner.getState() === Html5QrcodeScannerState.PAUSED) {
+        scanner.resume();
+      }
+    } catch {
+      /* cámara todavía no lista o ya detenida: ignorar */
+    }
+  }, [showDocPanel]);
+
+  useEffect(() => {
+    if (!showDocPanel) return;
+    docInputRef.current?.focus();
+  }, [showDocPanel]);
+
   const busy = phase.kind !== "idle";
 
   return (
@@ -194,6 +272,17 @@ function ScannerBody() {
           }`}
         >
           {practice ? "MODO PRÁCTICA: no se guarda nada · tocar para salir" : "Activar modo práctica (capacitación)"}
+        </button>
+      </div>
+
+      <div className="mx-auto w-full max-w-sm">
+        <button
+          type="button"
+          onClick={openDocPanel}
+          disabled={busy}
+          className="w-full rounded-2xl border-2 border-border bg-surface px-4 py-3 text-center text-sm font-black text-accent disabled:opacity-60"
+        >
+          ¿Sin QR? Ingresar documento
         </button>
       </div>
 
@@ -228,6 +317,97 @@ function ScannerBody() {
       <div className="mx-auto w-full max-w-sm">
         <SessionScoreboard stats={stats} combo={combo} comboBreakSignal={comboBreakSignal} history={history} />
       </div>
+
+      {showDocPanel && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Registrar ingreso por documento"
+          className="fixed inset-0 z-[950] flex items-center justify-center bg-black/40 px-4"
+          onClick={closeDocPanel}
+        >
+          <div
+            className="card-hard w-full max-w-sm p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-black text-foreground">Registrar sin QR</h2>
+            <p className="mt-1 text-sm font-bold text-foreground-muted">
+              Escribe el número de documento del estudiante.
+            </p>
+
+            <form
+              className="mt-4 flex flex-col gap-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (docLookup) {
+                  void handleConfirmDocument();
+                } else {
+                  void handleSearchDocument();
+                }
+              }}
+            >
+              <input
+                ref={docInputRef}
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="Número de documento"
+                value={docValue}
+                disabled={docLoading}
+                onChange={(e) => {
+                  setDocValue(e.target.value);
+                  setDocLookup(null);
+                  setDocError(null);
+                }}
+                className="w-full rounded-2xl border-2 border-border bg-background px-4 py-3 text-center text-lg font-black tracking-wide text-foreground focus:border-accent focus:outline-none"
+              />
+
+              {docError && (
+                <p className="rounded-2xl border-2 border-rojo bg-[#ffe3e3] px-4 py-2 text-center text-sm font-bold text-rojo-oscuro">
+                  {docError}
+                </p>
+              )}
+
+              {docLookup && (
+                <div className="rounded-2xl border-2 border-border bg-background-alt px-4 py-3 text-center">
+                  <p className="text-base font-black text-foreground">{docLookup.student.name}</p>
+                  <p className="text-sm font-bold text-foreground-muted">{docLookup.course.name}</p>
+                  {docLookup.alreadyToday && (
+                    <p className="mt-2 text-xs font-black uppercase tracking-wide text-amarillo-oscuro">
+                      Ya tiene registro hoy
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {!docLookup ? (
+                <button
+                  type="submit"
+                  disabled={!docValue.trim() || docLoading}
+                  className="w-full rounded-2xl border-2 border-border bg-accent px-4 py-3 text-center text-sm font-black text-white disabled:opacity-60"
+                >
+                  {docLoading ? "Buscando…" : "Buscar"}
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="w-full rounded-2xl border-2 border-border bg-primary px-4 py-3 text-center text-sm font-black text-white"
+                >
+                  {practice ? "Registrar ingreso (práctica)" : "Registrar ingreso"}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={closeDocPanel}
+                className="w-full rounded-2xl border-2 border-border bg-surface px-4 py-3 text-center text-sm font-black text-foreground-muted"
+              >
+                Cancelar
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {phase.kind === "sending" && <SendingOverlay />}
 

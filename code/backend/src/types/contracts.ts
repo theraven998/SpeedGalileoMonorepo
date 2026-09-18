@@ -20,7 +20,7 @@ export type AttendanceStatus = (typeof ATTENDANCE_STATUS)[number];
 /** Estados de lectura. `ausente` es derivado, nunca se almacena. */
 export type DerivedAttendanceStatus = AttendanceStatus | "ausente";
 
-export const ATTENDANCE_SOURCE = ["qr", "manual", "import"] as const;
+export const ATTENDANCE_SOURCE = ["qr", "manual", "import", "documento"] as const;
 export type AttendanceSource = (typeof ATTENDANCE_SOURCE)[number];
 
 export const COURSE_GROUP = ["intervencion", "control"] as const;
@@ -123,6 +123,17 @@ export interface MyAttendanceDto {
 
 export interface ScanRequest {
   qrToken: string;
+}
+
+export interface ScanDocumentRequest {
+  document: string;
+}
+
+/** Respuesta de `GET /api/attendance/lookup-document`. Datos mínimos, no crea asistencia. */
+export interface DocumentLookupResponse {
+  student: StudentRef;
+  course: CourseRef;
+  alreadyToday: boolean;
 }
 
 export interface ScanResponse {

@@ -9,6 +9,8 @@ export interface ScanHistoryItem {
   id: string;
   name: string;
   status: AttendanceStatus;
+  /** Cómo se registró. Sin QR de por medio se marca en el historial para que quede claro. */
+  source?: "qr" | "documento";
 }
 
 export interface SessionScoreboardProps {
@@ -127,6 +129,11 @@ export function SessionScoreboard({ stats, combo, comboBreakSignal, history }: S
               >
                 <span className={`h-2 w-2 shrink-0 rounded-full ${HISTORY_DOT[item.status]}`} aria-hidden />
                 <span className="truncate text-sm font-bold text-foreground">{item.name}</span>
+                {item.source === "documento" && (
+                  <span className="shrink-0 rounded-full bg-background-alt px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-foreground-muted">
+                    Doc
+                  </span>
+                )}
                 <span className="ml-auto shrink-0 text-[11px] font-black uppercase text-foreground-muted">
                   {HISTORY_LABEL[item.status]}
                 </span>

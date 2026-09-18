@@ -4,6 +4,7 @@ import type {
   ChangePasswordRequest,
   CreateStudentRequest,
   CreateStudentResponse,
+  DocumentLookupResponse,
   PracticeScanResponse,
   QrLookupResponse,
   ScanConfigResponse,
@@ -110,6 +111,20 @@ export const api = {
   practiceScanQr: (qrToken: string) =>
     request<PracticeScanResponse>("/api/attendance/practice-scan", { method: "POST", body: JSON.stringify({ qrToken }) }),
 
+  /** Registro sin QR: el profesor busca por documento antes de confirmar. No crea asistencia. */
+  lookupDocument: (document: string) =>
+    request<DocumentLookupResponse>(`/api/attendance/lookup-document?document=${encodeURIComponent(document)}`),
+
+  scanDocument: (document: string) =>
+    request<ScanResponse>("/api/attendance/scan-document", { method: "POST", body: JSON.stringify({ document }) }),
+
+  /** Modo práctica por documento: misma clasificación, no guarda nada. */
+  practiceScanDocument: (document: string) =>
+    request<PracticeScanResponse>("/api/attendance/practice-scan-document", {
+      method: "POST",
+      body: JSON.stringify({ document }),
+    }),
+
   scanConfig: () => request<ScanConfigResponse>("/api/attendance/scan-config"),
 
   health: () => request<{ ok: boolean }>("/health"),
@@ -161,7 +176,7 @@ export interface AttendanceRecord {
   status: AttendanceStatus;
   points: number;
   minutesLate: number;
-  source: "qr" | "manual" | "import";
+  source: "qr" | "manual" | "import" | "documento";
   justified: boolean;
 }
 
