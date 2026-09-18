@@ -112,6 +112,8 @@ export const api = {
 
   scanConfig: () => request<ScanConfigResponse>("/api/attendance/scan-config"),
 
+  health: () => request<{ ok: boolean }>("/health"),
+
   myAttendance: () => request<AttendanceRecord[]>("/api/attendance/me"),
 
   allAttendance: (params?: { courseId?: string }) => {

@@ -12,6 +12,7 @@ import { Hero } from "@/components/landing/Hero";
 import { ScoreCard } from "@/components/landing/ScoreCard";
 import { ArrivalDemo } from "@/components/landing/ArrivalDemo";
 import { RankingPreview } from "@/components/landing/RankingPreview";
+import { WakeBackendButton } from "@/components/landing/WakeBackendButton";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -43,6 +44,7 @@ export default function Home() {
         <Final />
         <Creditos />
       </main>
+      <WakeBackendButton />
     </>
   );
 }
