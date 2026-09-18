@@ -62,6 +62,7 @@ Orden descendente por `day`.
 { "student": { "id","name" }, "course": { "id","name" },
   "day":"2026-09-10", "status":"a_tiempo", "points":2,
   "minutesLate":0, "scannedAt":"ISO" }
+// 403 Portería cerrada (solo si SCAN_WINDOW_ENFORCED=true y fuera de la ventana)
 // 404 QR no corresponde a un estudiante activo con curso
 // 409 { "error":"Este estudiante ya tiene registro hoy",
 //       "existing": { "day","status","points","scannedAt" } }
@@ -73,6 +74,19 @@ descartar el pendiente y la UI pueda mostrar qué pasó ese día.
 `scannedAt` lo fija **siempre el servidor**. El cliente nunca envía la hora,
 ni siquiera desde la cola offline: si un escaneo se reintenta al día
 siguiente, es un caso de corrección manual, no de sincronización.
+
+### `POST /api/attendance/practice-scan` 🏫
+Modo práctica para capacitación. Mismo req y misma forma de respuesta que
+`/scan` más `"practice": true`, pero **no guarda nada** y no aplica la
+ventana horaria. `200` o `404`.
+
+### `GET /api/attendance/scan-config` 🏫🗂
+```jsonc
+{ "windowEnforced": false, "windowStartMin": 360, "windowEndMin": 510 }
+```
+Ventana de portería en minutos desde medianoche (Bogotá). Se configura con
+`SCAN_WINDOW_ENFORCED` / `SCAN_WINDOW_START` / `SCAN_WINDOW_END` (`HH:mm`).
+Con `windowEnforced=false` se registra a cualquier hora; fuera de 07:30 queda `tarde`.
 
 ---
 

@@ -4,7 +4,9 @@ import type {
   ChangePasswordRequest,
   CreateStudentRequest,
   CreateStudentResponse,
+  PracticeScanResponse,
   QrLookupResponse,
+  ScanConfigResponse,
 } from "@/lib/contracts";
 
 // Vacío por defecto = mismo origen (ver next.config.ts rewrites hacia el backend).
@@ -103,6 +105,12 @@ export const api = {
 
   scanQr: (qrToken: string) =>
     request<ScanResponse>("/api/attendance/scan", { method: "POST", body: JSON.stringify({ qrToken }) }),
+
+  /** Modo práctica: misma clasificación, no guarda nada. */
+  practiceScanQr: (qrToken: string) =>
+    request<PracticeScanResponse>("/api/attendance/practice-scan", { method: "POST", body: JSON.stringify({ qrToken }) }),
+
+  scanConfig: () => request<ScanConfigResponse>("/api/attendance/scan-config"),
 
   myAttendance: () => request<AttendanceRecord[]>("/api/attendance/me"),
 

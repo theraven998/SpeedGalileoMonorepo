@@ -146,6 +146,18 @@ export interface ScanConflictResponse {
   };
 }
 
+/** Respuesta de `POST /api/attendance/practice-scan`: misma forma que el escaneo real, pero NO se guarda. */
+export interface PracticeScanResponse extends ScanResponse {
+  practice: true;
+}
+
+/** Respuesta de `GET /api/attendance/scan-config`. Minutos desde medianoche, hora de Bogotá. */
+export interface ScanConfigResponse {
+  windowEnforced: boolean;
+  windowStartMin: number;
+  windowEndMin: number;
+}
+
 export interface ManualAttendanceRequest {
   studentId: string;
   day: DayString;

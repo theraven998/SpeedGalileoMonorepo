@@ -5,19 +5,34 @@ import { UserModel } from "@/models/User.js";
 import { AttendanceRecordModel } from "@/models/AttendanceRecord.js";
 import type { Course } from "@/models/Course.js";
 import { computeAttendance } from "@/utils/attendanceRules.js";
-import { isDayString } from "@/utils/time.js";
-import type { ScanResponse, ScanConflictResponse } from "@/types/contracts.js";
+import { isDayString, toBogotaParts } from "@/utils/time.js";
+import { env } from "@/config/env.js";
+import type {
+  ScanResponse,
+  ScanConflictResponse,
+  PracticeScanResponse,
+  ScanConfigResponse,
+} from "@/types/contracts.js";
 
 const scanSchema = z.object({
   qrToken: z.string().min(1),
 });
 
-// Profesor escanea QR del estudiante en portería
-export async function scanQr(req: Request, res: Response): Promise<void> {
+function formatMin(min: number): string {
+  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+
+function isInsideScanWindow(now: Date): boolean {
+  const { minutes } = toBogotaParts(now);
+  return minutes >= env.scanWindow.startMin && minutes <= env.scanWindow.endMin;
+}
+
+/** Valida el body y busca al estudiante. Responde 400/404 y devuelve null si no aplica. */
+async function findScannedStudent(req: Request, res: Response) {
   const parsed = scanSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "qrToken requerido" });
-    return;
+    return null;
   }
 
   // $ne: false a propósito: documentos previos a la migración no tienen `active`
@@ -29,10 +44,57 @@ export async function scanQr(req: Request, res: Response): Promise<void> {
 
   if (!student || !student.course) {
     res.status(404).json({ error: "QR no corresponde a un estudiante activo con curso" });
+    return null;
+  }
+  return { student, course: student.course };
+}
+
+// Profesor/coordinación: si la portería está restringida por hora y cuál es la ventana
+export function getScanConfig(_req: Request, res: Response): void {
+  const body: ScanConfigResponse = {
+    windowEnforced: env.scanWindow.enforced,
+    windowStartMin: env.scanWindow.startMin,
+    windowEndMin: env.scanWindow.endMin,
+  };
+  res.json(body);
+}
+
+// Modo práctica (capacitación): clasifica igual que el escaneo real pero NUNCA guarda nada
+export async function practiceScan(req: Request, res: Response): Promise<void> {
+  const found = await findScannedStudent(req, res);
+  if (!found) return;
+  const { student, course } = found;
+
+  const now = new Date();
+  const { day, status, points, minutesLate } = computeAttendance(now);
+  const body: PracticeScanResponse = {
+    student: { id: student._id.toString(), name: student.name },
+    course: { id: course._id.toString(), name: course.name },
+    day,
+    status,
+    points,
+    minutesLate,
+    scannedAt: now.toISOString(),
+    practice: true,
+  };
+  res.json(body);
+}
+
+// Profesor escanea QR del estudiante en portería
+export async function scanQr(req: Request, res: Response): Promise<void> {
+  const now = new Date(); // el servidor fija SIEMPRE la hora, el cliente nunca la envía
+
+  if (env.scanWindow.enforced && !isInsideScanWindow(now)) {
+    res.status(403).json({
+      error: `Portería cerrada: solo se registra entre ${formatMin(env.scanWindow.startMin)} y ${formatMin(env.scanWindow.endMin)}`,
+    });
     return;
   }
 
-  const now = new Date(); // el servidor fija SIEMPRE la hora, el cliente nunca la envía
+  const found = await findScannedStudent(req, res);
+  if (!found) return;
+  const { student, course } = found;
+
   const { day, status, points, minutesLate } = computeAttendance(now);
 
   let record;
@@ -41,7 +103,7 @@ export async function scanQr(req: Request, res: Response): Promise<void> {
     // la garantiza el índice único { student, day }, capturado abajo como E11000.
     record = await AttendanceRecordModel.create({
       student: student._id,
-      course: student.course._id,
+      course: course._id,
       day,
       scannedAt: now,
       status,
@@ -71,7 +133,7 @@ export async function scanQr(req: Request, res: Response): Promise<void> {
 
   const body: ScanResponse = {
     student: { id: student._id.toString(), name: student.name },
-    course: { id: student.course._id.toString(), name: student.course.name },
+    course: { id: course._id.toString(), name: course.name },
     day: record.day,
     status: record.status,
     points: record.points,
