@@ -1,0 +1,4 @@
+.env
+qrs_output/
+qrs_output_prueba/
+__pycache__/
