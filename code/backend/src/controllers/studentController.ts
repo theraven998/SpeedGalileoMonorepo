@@ -7,7 +7,7 @@ import { UserModel, type User } from "@/models/User.js";
 import { CourseModel, type Course } from "@/models/Course.js";
 import { normalizeDocument, isValidDocument } from "@/utils/studentDocument.js";
 import { generateTempPassword } from "@/utils/tempPassword.js";
-import type { AdminStudentDto, CreateStudentResponse } from "@/types/contracts.js";
+import type { AdminStudentDto, CreateStudentResponse, StudentQrDto, QrLookupResponse } from "@/types/contracts.js";
 
 function newQrToken(): string {
   return randomBytes(16).toString("base64url");
@@ -152,5 +152,70 @@ export async function listStudents(req: Request, res: Response): Promise<void> {
     .sort({ name: 1 });
 
   const dto: AdminStudentDto[] = students.map((student) => toAdminStudentDto(student, student.course));
+  res.json(dto);
+}
+
+function toStudentQrDto(user: StudentLike & { qrToken?: string | null }, course: Course | null): StudentQrDto {
+  return {
+    id: user._id.toString(),
+    name: user.name,
+    document: user.document ?? "",
+    course: course ? { id: course._id.toString(), name: course.name } : { id: "", name: "" },
+    qrToken: user.qrToken ?? "",
+  };
+}
+
+// Coordinación: único endpoint que expone qrToken en bulto, exclusivo para impresión masiva de stickers.
+export async function listStudentQrs(req: Request, res: Response): Promise<void> {
+  const parsed = listStudentsQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Datos inválidos" });
+    return;
+  }
+
+  const { courseId } = parsed.data;
+  if (courseId && !Types.ObjectId.isValid(courseId)) {
+    res.status(400).json({ error: "courseId inválido" });
+    return;
+  }
+
+  // active: $ne: false a propósito, igual que scanQr: no imprimir sticker de estudiantes desactivados.
+  const filter: Record<string, unknown> = {
+    role: "estudiante",
+    active: { $ne: false },
+    qrToken: { $exists: true, $ne: null },
+  };
+  if (courseId) filter.course = courseId;
+
+  const students = await UserModel.find(filter)
+    .populate<{ course: Course | null }>("course", "name")
+    .sort({ name: 1 });
+
+  const dto: StudentQrDto[] = students.map((student) => toStudentQrDto(student, student.course));
+  res.json(dto);
+}
+
+const qrLookupQuerySchema = z.object({ token: z.string().min(1) });
+
+// Validador de sticker: solo dice a quién pertenece el QR. Nunca crea asistencia ni expone más datos.
+export async function lookupQr(req: Request, res: Response): Promise<void> {
+  const parsed = qrLookupQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "token requerido" });
+    return;
+  }
+
+  const student = await UserModel.findOne({
+    qrToken: parsed.data.token,
+    role: "estudiante",
+    active: { $ne: false },
+  });
+
+  if (!student) {
+    res.status(404).json({ error: "QR no corresponde a un estudiante activo" });
+    return;
+  }
+
+  const dto: QrLookupResponse = { name: student.name };
   res.json(dto);
 }

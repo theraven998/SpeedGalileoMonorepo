@@ -216,6 +216,20 @@ export interface CreateStudentResponse {
   qrToken: string;
 }
 
+/** Export masivo para impresión de stickers. Único listado que sí incluye qrToken. */
+export interface StudentQrDto {
+  id: string;
+  name: string;
+  document: string;
+  course: CourseRef;
+  qrToken: string;
+}
+
+/** Respuesta de `GET /api/students/qr-lookup`: solo el nombre, no crea asistencia ni expone más datos. */
+export interface QrLookupResponse {
+  name: string;
+}
+
 // ---------------------------------------------------------------- importación
 
 export interface ImportError {

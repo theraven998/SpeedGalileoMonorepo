@@ -216,6 +216,11 @@ export interface CreateStudentResponse {
   qrToken: string;
 }
 
+/** Respuesta de `GET /api/students/qr-lookup`: solo el nombre, no crea asistencia ni expone más datos. */
+export interface QrLookupResponse {
+  name: string;
+}
+
 // ---------------------------------------------------------------- importación
 
 export interface ImportError {

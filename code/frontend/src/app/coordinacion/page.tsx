@@ -248,9 +248,16 @@ function CoordinacionBody() {
       <div className="mx-auto w-full max-w-2xl">
         <Link
           href="/coordinacion/estudiantes"
-          className="btn-3d mb-5 flex w-full items-center justify-center gap-2 text-center"
+          className="btn-3d mb-3 flex w-full items-center justify-center gap-2 text-center"
         >
           Registrar estudiantes
+        </Link>
+
+        <Link
+          href="/coordinacion/validar-qr"
+          className="btn-3d btn-3d-outline mb-5 flex w-full items-center justify-center gap-2 text-center"
+        >
+          Validar sticker QR
         </Link>
 
         <select

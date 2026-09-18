@@ -4,6 +4,7 @@ import type {
   ChangePasswordRequest,
   CreateStudentRequest,
   CreateStudentResponse,
+  QrLookupResponse,
 } from "@/lib/contracts";
 
 // Vacío por defecto = mismo origen (ver next.config.ts rewrites hacia el backend).
@@ -127,6 +128,9 @@ export const api = {
     const qs = courseId ? `?courseId=${courseId}` : "";
     return request<AdminStudentDto[]>(`/api/students${qs}`);
   },
+
+  lookupQr: (qrToken: string) =>
+    request<QrLookupResponse>(`/api/students/qr-lookup?token=${encodeURIComponent(qrToken)}`),
 };
 
 export interface Course {
